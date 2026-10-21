@@ -224,13 +224,20 @@
       if (a.length === 2 && !isNaN(+a[0]) && !isNaN(+a[1])) pts.push({ x: +a[0], h: +a[1] });
     });
     if (!pts.length) return false;
+    var om = [];   // 14.6: de vorm uit de tekening (bovenrand), ook waar niet gezaagd wordt
+    String(v['Omtrek'] || '').split(';').forEach(function (s) {
+      var a = s.split(',');
+      if (a.length === 2 && !isNaN(+a[0]) && !isNaN(+a[1]) && a[0] !== '' && a[1] !== '') om.push({ x: +a[0], h: +a[1] });
+    });
     var boven = parseFloat(v['Bovenkant']) || Math.max.apply(null, pts.map(function (q) { return q.h; }));
     var xs = pts.map(function (q) { return q.x; }).slice().sort(function (a, b) { return a - b; });
     var dxs = [];   // gewone afstand tussen twee posities (mediaan; de randsneden liggen dichter bij)
     for (var i = 1; i < xs.length; i++) { var dx = xs[i] - xs[i - 1]; if (dx > 0.01) dxs.push(dx); }
     dxs.sort(function (a, b) { return a - b; });
     var stap = dxs.length ? dxs[Math.floor(dxs.length / 2)] : 3;
-    var x0 = xs[0] - stap / 2, x1 = xs[xs.length - 1] + stap / 2, W = Math.max(1, x1 - x0);
+    var x0 = xs[0] - stap / 2, x1 = xs[xs.length - 1] + stap / 2;
+    if (om.length > 1) { om.forEach(function (q) { if (q.x < x0) x0 = q.x; if (q.x > x1) x1 = q.x; }); }   // 14.6: hele breedte van de tekening
+    var W = Math.max(1, x1 - x0);
     var B = 560, H0 = 200, marge = 14;
     var sx = (B - 2 * marge) / W, sy = sx, opSchaal = true;
     if (boven * sy > H0) { sx = sy = H0 / boven; }                        // te hoog: kleiner, op schaal
@@ -250,13 +257,18 @@
       el('rect', { x: X(q.x - stap / 2) - 0.3, y: Y(boven) - 1, width: stap * sx + 0.6, height: (boven - h) * sy + 1, fill: kleur, 'shape-rendering': 'crispEdges' }, svg);
     }
     el('line', { x1: 4, x2: B - 4, y1: Y(0), y2: Y(0), stroke: 'var(--tafel)', 'stroke-width': 2 }, svg);
+    if (om.length > 1) {   // 14.6: vorm uit de tekening als lijn erover
+      el('polyline', { points: om.map(function (q) { return X(q.x).toFixed(1) + ',' + Y(Math.min(Math.max(q.h, 0), boven)).toFixed(1); }).join(' '),
+                       fill: 'none', stroke: 'var(--tekst)', 'stroke-width': 1.5, 'stroke-linejoin': 'round', opacity: 0.85 }, svg);
+    }
     if (!klaar && gedaan < n) {
       var c = pts[gedaan];
       el('line', { x1: X(c.x), x2: X(c.x), y1: 2, y2: Y(Math.max(c.h, 0)), stroke: 'var(--accent-donker)', 'stroke-width': 2, 'stroke-dasharray': '4 3' }, svg);
     }
     $('tekening').replaceChildren(svg);
     $('legenda').innerHTML = '<span><i style="background:var(--weg)"></i>gezaagd</span><span><i style="background:var(--accent)"></i>nu</span>' +
-      '<span><i style="background:var(--plan)"></i>nog te zagen</span><span><i style="background:var(--steen)"></i>blijft staan</span>';
+      '<span><i style="background:var(--plan)"></i>nog te zagen</span><span><i style="background:var(--steen)"></i>blijft staan</span>' +
+      (om.length > 1 ? '<span><i style="background:none;border:0;border-top:2px solid var(--tekst);height:0;margin-top:6px"></i>vorm tekening</span>' : '');
     return { opSchaal: opSchaal, n: n, posities: parseInt(v['Posities'], 10) || n };
   }
 
