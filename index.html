@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Bruggenzaag op afstand</title>
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#141210">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Bruggenzaag">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icoon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<!-- 14.0 — Meekijken op afstand. Leest het stille ntfy-kanaal <topic>-meekijk dat de kast vult.
+     Alleen kijken: deze pagina stuurt niets naar de kast. Zet hem op een plek op internet
+     (bijv. GitHub Pages) of open hem gewoon als bestand. Kanaalnaam: veld op de pagina of #naam.
+     Sinds 14.0: doorsnede van een profiel/CAD-job (bericht "Doorsnede" bij de start), een plaatje
+     bij zagen en frezen, naam van de job, en tussen twee berichten een geschatte voortgang. -->
+<style>
+  :root {
+    --bg: #F7F3EC; --panel: #FFFFFF; --rand: #E4DCC9; --verhoogd: #F1EAD9;
+    --hoofd: #2B2723; --hoofd-tekst: #F1EAD9; --hoofd-zacht: #D9CFBD;
+    --accent: #E8934A; --accent-donker: #B5603A; --tekst: #2B2723; --zacht: #7D766A;
+    --run: #3E9C6B; --warn: #C9811F; --stop: #C94A3D; --meld-bg: #FBEAE7; --warn-bg: #FBF0D9;
+    --steen: #D9CFBD; --steen-rand: #A99C86; --weg: #F7F3EC; --plan: #F2C9A4; --tafel: #7D766A;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #1B1916; --panel: #25221E; --rand: #3A352F; --verhoogd: #2F2B26;
+      --hoofd: #120F0D; --tekst: #ECE6DA; --zacht: #A39B8D; --accent-donker: #E8934A;
+      --meld-bg: #3A2522; --warn-bg: #3A2F1C;
+      --steen: #4A443C; --steen-rand: #6E665A; --weg: #25221E; --plan: #6B4A33; --tafel: #A39B8D;
+      color-scheme: dark; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--tekst);
+         font: 15px/1.45 -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+  main { max-width: 560px; margin: 0 auto; padding-block: 16px 40px;
+         padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+  header { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 14px; flex-wrap: wrap; }
+  .merk { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--zacht); font-weight: 600; }
+  h1 { margin: 2px 0 0; font-size: 22px; line-height: 1.15; text-wrap: balance; }
+  h2 { margin: 0 0 8px; font-size: 13px; letter-spacing: .1em; text-transform: uppercase; color: var(--zacht); }
+  .verb { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--zacht); white-space: nowrap; }
+  .stip { width: 10px; height: 10px; border-radius: 50%; background: var(--zacht); }
+  .stip.ok { background: var(--run); box-shadow: 0 0 6px var(--run); }
+  .stip.oud { background: var(--warn); }
+  .stip.weg { background: var(--stop); }
+  .kaart { background: var(--panel); border: 1px solid var(--rand); border-radius: 12px; padding: 16px; margin-bottom: 12px; }
+  .hoofd { background: var(--hoofd); color: var(--hoofd-tekst); border: 0; }
+  .soort { font-size: 13px; text-transform: uppercase; letter-spacing: .1em; color: var(--accent); font-weight: 700; overflow-wrap: anywhere; }
+  .job { font-size: 15px; color: var(--hoofd-zacht); margin-top: 2px; overflow-wrap: anywhere; }
+  .fase { font-size: 26px; font-weight: 700; margin: 2px 0 10px; line-height: 1.15; overflow-wrap: anywhere; }
+  .balk { height: 10px; border-radius: 99px; background: rgba(255,255,255,.12); overflow: hidden; }
+  .balk i { display: block; height: 100%; width: 0; background: var(--accent); border-radius: 99px; transition: width .4s; }
+  .regels { display: flex; justify-content: space-between; gap: 6px 12px; flex-wrap: wrap; margin-top: 10px; font-size: 14px; color: var(--hoofd-zacht); }
+  .regels span { min-width: 0; }
+  .klaarom { font-size: 15px; color: var(--hoofd-tekst); font-weight: 600; }
+  .labels { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+  .label { font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 99px; color: #fff; }
+  .label.pauze { background: var(--warn); } .label.nood { background: var(--stop); } .label.zaag { background: var(--run); }
+  .tekening svg { display: block; width: 100%; height: auto; }
+  .legenda { display: flex; gap: 6px 14px; flex-wrap: wrap; font-size: 12px; color: var(--zacht); margin-top: 8px; }
+  .legenda span { display: inline-flex; align-items: center; gap: 5px; }
+  .legenda i { width: 12px; height: 12px; border-radius: 3px; display: inline-block; border: 1px solid var(--steen-rand); }
+  .onder { font-size: 13px; color: var(--zacht); margin-top: 6px; overflow-wrap: anywhere; }
+  .raster { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .waarde { font-size: 12px; color: var(--zacht); }
+  .getal { font-size: 24px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .getal small { font-size: 13px; color: var(--zacht); font-weight: 500; margin-left: 3px; }
+  .melding { border-left: 4px solid var(--stop); background: var(--meld-bg); }
+  .melding.warn { border-left-color: var(--warn); background: var(--warn-bg); }
+  .tijd { font-size: 13px; color: var(--zacht); font-variant-numeric: tabular-nums; }
+  form { display: grid; gap: 8px; }
+  label { font-size: 13px; color: var(--zacht); }
+  input { font: inherit; padding: 11px 12px; border-radius: 10px; border: 1px solid var(--rand); background: var(--panel); color: var(--tekst); min-width: 0; }
+  input:focus-visible, button:focus-visible { outline: 2px solid var(--accent-donker); outline-offset: 2px; }
+  button { font: inherit; font-weight: 600; padding: 11px 14px; border-radius: 10px; border: 0; background: var(--accent-donker); color: #fff; cursor: pointer; }
+  .link { background: none; color: var(--accent-donker); padding: 0; font-weight: 600; text-decoration: underline; }
+  .voet { text-align: center; font-size: 12.5px; color: var(--zacht); margin-top: 18px; }
+  [hidden] { display: none !important; }
+  @media (prefers-reduced-motion: reduce) { .balk i { transition: none; } }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <div>
+      <div class="merk">Steen &amp; Ambacht</div>
+      <h1>Bruggenzaag op afstand</h1>
+    </div>
+    <span class="verb"><span class="stip" id="stip"></span><span id="verbTekst">—</span></span>
+  </header>
+
+  <section class="kaart" id="kiesVak" hidden>
+    <form id="kiesForm">
+      <label for="inputKanaal">Naam van het meekijkkanaal (staat in de app op de tablet, tabblad Netwerk → Meekijken op afstand)</label>
+      <input id="inputKanaal" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="bijv. bruggenzaag-x7k2q9-meekijk">
+      <button type="submit" id="btnKies">Meekijken</button>
+    </form>
+  </section>
+
+  <div id="standVak" hidden>
+    <section class="kaart hoofd">
+      <div class="soort" id="soort">—</div>
+      <div class="job" id="job" hidden></div>
+      <div class="fase" id="fase">—</div>
+      <div class="balk" id="balkVak"><i id="balk"></i></div>
+      <div class="regels"><span id="stand">&nbsp;</span><span id="rest"></span></div>
+      <div class="regels" id="klaarVak" hidden><span class="klaarom" id="klaarom"></span></div>
+      <div class="labels">
+        <span class="label nood" id="lNood" hidden>NOODSTOP</span>
+        <span class="label pauze" id="lPauze" hidden>GEPAUZEERD</span>
+        <span class="label zaag" id="lZaag" hidden>Zaagmotor aan</span>
+      </div>
+    </section>
+
+    <section class="kaart melding" id="meldVak" hidden>
+      <div class="waarde">Laatste melding van de besturing</div>
+      <div id="meldTekst"></div>
+    </section>
+
+    <section class="kaart tekening" id="tekenVak" hidden>
+      <h2 id="tekenKop">Doorsnede</h2>
+      <div id="tekening"></div>
+      <div class="legenda" id="legenda"></div>
+      <div class="onder" id="tekenOnder"></div>
+    </section>
+
+    <section class="kaart raster">
+      <div><div class="waarde">Hoogte (boven de tafel)</div><div class="getal" id="hoogte">—<small>mm</small></div></div>
+      <div><div class="waarde">Breedte</div><div class="getal" id="breedte">—<small>mm</small></div></div>
+    </section>
+
+    <section class="kaart melding warn" id="oudVak" hidden>
+      <div id="oudTekst"></div>
+    </section>
+
+    <div class="tijd" id="tijd"></div>
+  </div>
+
+  <p class="voet">Alleen meekijken — bedienen kan alleen op de tablet bij de zaag.<br>
+    Tijdens het zagen komt er elke 3 minuten een nieuwe stand, en meteen bij start, stop of een melding. Daartussen schat de pagina hoe ver hij is.<br>
+    Tip: zet deze pagina via het menu van de browser op je startscherm.<br>
+    <button class="link" type="button" id="btnAnder" hidden>Ander kanaal</button></p>
+</main>
+<script>
+(function () {
+  var NTFY = 'https://ntfy.sh/';
+  var SVGNS = 'http://www.w3.org/2000/svg';
+  var $ = function (id) { return document.getElementById(id); };
+  var kanaal = '', bron = null, timer = null;
+  var laatste = null, laatsteActief = null, doorsnede = null;
+
+  function bewaar(k) { try { localStorage.setItem('bruggenzaag-meekijkkanaal', k); } catch (e) {} }
+  function bewaard() { try { return localStorage.getItem('bruggenzaag-meekijkkanaal') || ''; } catch (e) { return ''; } }
+  function geldig(k) { return /^[A-Za-z0-9_-]{1,64}$/.test(k); }
+  function tweeCijfers(n) { return (n < 10 ? '0' : '') + n; }
+  function klok(ms) { var d = new Date(ms); return tweeCijfers(d.getHours()) + ':' + tweeCijfers(d.getMinutes()); }
+  function duur(sec) {
+    var min = Math.max(0, Math.ceil(sec / 60));
+    if (min < 60) return min + ' min';
+    return Math.floor(min / 60) + ' u ' + (min % 60) + ' min';
+  }
+  function verb(klasse, tekst) { $('stip').className = 'stip ' + klasse; $('verbTekst').textContent = tekst; }
+  function el(naam, attr, ouder) {
+    var e = document.createElementNS(SVGNS, naam);
+    for (var k in attr) e.setAttribute(k, attr[k]);
+    if (ouder) ouder.appendChild(e);
+    return e;
+  }
+  function getal(re, t) { var m = re.exec(t || ''); return m ? parseInt(m[1], 10) : NaN; }
+
+  // Bericht van de kast: titel "Bruggenzaag · <soort> · <fase>", tekst = regels "Sleutel: waarde".
+  function lees(m) {
+    var v = {};
+    String(m.message || '').split('\n').forEach(function (r) {
+      var i = r.indexOf(': ');
+      if (i > 0) v[r.slice(0, i).trim()] = r.slice(i + 2).trim();
+    });
+    var titel = String(m.title || '').replace(/^Bruggenzaag\s*·\s*/, '');
+    return { titel: titel, v: v, tijd: (m.time || 0) * 1000 };
+  }
+  function neem(m) {
+    if (!m || m.event !== 'message') return;
+    var b = lees(m);
+    if (b.titel === 'Doorsnede') { doorsnede = b; return; }
+    laatste = b;
+    if ('Stand' in b.v) laatsteActief = b;
+  }
+  function soortVan(b) {
+    var s = b.v['Soort'];
+    if (s) return s;
+    var t = b.titel.replace(/^NOODSTOP\s*·\s*/, '');
+    if (/^CAD/.test(t)) return 'cad';
+    if (/^Profiel/.test(t)) return 'profiel';
+    if (/^Frezen/.test(t)) return 'frezen';
+    if (/^Snijlijst/.test(t)) return 'snijlijst';
+    return 'zagen';
+  }
+
+  // Voortgang (0..1) uit een statusbericht, en tussen twee berichten een schatting op basis van
+  // de resterende tijd. De schatting loopt hooguit 15 % vóór op het laatste bericht.
+  function voortgang(b, schatten) {
+    var p = parseInt(b.v['Voortgang'], 10);
+    p = isNaN(p) ? 0 : p / 100;
+    if (!schatten) return { p: p, geschat: false };
+    var rest = getal(/\((\d+) s\)/, b.v['Nog']);
+    var stil = /gepauzeerd/i.test(b.v['Fase'] || '') || /NOODSTOP/.test(b.titel);
+    if (isNaN(rest) || rest <= 0 || stil) return { p: p, geschat: false };
+    var leeftijd = (Date.now() - b.tijd) / 1000;
+    var schat = p + (1 - p) * Math.min(1, leeftijd / rest);
+    schat = Math.min(schat, p + 0.15, 0.995);
+    return { p: schat, geschat: schat > p + 0.005 };
+  }
+
+  // ---------- Tekeningen ----------
+  function tekenProfiel(d, vg, klaar) {
+    var v = d.v, pts = [];
+    String(v['Punten'] || '').split(';').forEach(function (s) {
+      var a = s.split(',');
+      if (a.length === 2 && !isNaN(+a[0]) && !isNaN(+a[1])) pts.push({ x: +a[0], h: +a[1] });
+    });
+    if (!pts.length) return false;
+    var boven = parseFloat(v['Bovenkant']) || Math.max.apply(null, pts.map(function (q) { return q.h; }));
+    var xs = pts.map(function (q) { return q.x; }).slice().sort(function (a, b) { return a - b; });
+    var dxs = [];   // gewone afstand tussen twee posities (mediaan; de randsneden liggen dichter bij)
+    for (var i = 1; i < xs.length; i++) { var dx = xs[i] - xs[i - 1]; if (dx > 0.01) dxs.push(dx); }
+    dxs.sort(function (a, b) { return a - b; });
+    var stap = dxs.length ? dxs[Math.floor(dxs.length / 2)] : 3;
+    var x0 = xs[0] - stap / 2, x1 = xs[xs.length - 1] + stap / 2, W = Math.max(1, x1 - x0);
+    var B = 560, H0 = 200, marge = 14;
+    var sx = (B - 2 * marge) / W, sy = sx, opSchaal = true;
+    if (boven * sy > H0) { sx = sy = H0 / boven; }                        // te hoog: kleiner, op schaal
+    if (boven * sy < 70) { sy = 70 / Math.max(1, boven); opSchaal = false; }   // te plat: hoogte uitvergroot
+    var hoog = boven * sy + 2 * marge + 10;
+    var links = (B - W * sx) / 2;
+    var svg = el('svg', { viewBox: '0 0 ' + B + ' ' + hoog, role: 'img', 'aria-label': 'Doorsnede van het profiel met de voortgang' });
+    var X = function (x) { return links + (x - x0) * sx; };
+    var Y = function (h) { return marge + (boven - h) * sy; };
+    el('rect', { x: X(x0), y: Y(boven), width: W * sx, height: boven * sy, fill: 'var(--steen)', stroke: 'var(--steen-rand)', 'stroke-width': 1 }, svg);
+    var n = pts.length;
+    var gedaan = klaar ? n : Math.floor(vg * n);
+    for (var k = 0; k < n; k++) {
+      var q = pts[k], h = Math.max(q.h, 0);
+      if (q.h >= boven - 0.05) continue;
+      var kleur = k < gedaan ? 'var(--weg)' : (k === gedaan ? 'var(--accent)' : 'var(--plan)');
+      el('rect', { x: X(q.x - stap / 2) - 0.3, y: Y(boven) - 1, width: stap * sx + 0.6, height: (boven - h) * sy + 1, fill: kleur, 'shape-rendering': 'crispEdges' }, svg);
+    }
+    el('line', { x1: 4, x2: B - 4, y1: Y(0), y2: Y(0), stroke: 'var(--tafel)', 'stroke-width': 2 }, svg);
+    if (!klaar && gedaan < n) {
+      var c = pts[gedaan];
+      el('line', { x1: X(c.x), x2: X(c.x), y1: 2, y2: Y(Math.max(c.h, 0)), stroke: 'var(--accent-donker)', 'stroke-width': 2, 'stroke-dasharray': '4 3' }, svg);
+    }
+    $('tekening').replaceChildren(svg);
+    $('legenda').innerHTML = '<span><i style="background:var(--weg)"></i>gezaagd</span><span><i style="background:var(--accent)"></i>nu</span>' +
+      '<span><i style="background:var(--plan)"></i>nog te zagen</span><span><i style="background:var(--steen)"></i>blijft staan</span>';
+    return { opSchaal: opSchaal, n: n, posities: parseInt(v['Posities'], 10) || n };
+  }
+
+  function tekenZagen(b, klaar) {
+    var st = b.v['Stand'] || '';
+    var pos = getal(/positie (\d+)/, st), N = getal(/positie \d+ van (\d+)/, st);
+    var g = getal(/gang (\d+)/, st), G = getal(/gang \d+ van (\d+)/, st);
+    if (isNaN(N) || N < 1) return false;
+    var toon = Math.min(N, 60), B = 560, H = 150, m = 14;
+    var svg = el('svg', { viewBox: '0 0 ' + B + ' ' + (H + 2 * m), role: 'img', 'aria-label': 'Zaagposities en voortgang' });
+    el('rect', { x: m, y: m, width: B - 2 * m, height: H, fill: 'var(--steen)', stroke: 'var(--steen-rand)' }, svg);
+    for (var i = 0; i < toon; i++) {
+      var echte = Math.floor((i + 0.5) * N / toon) + 1;
+      var x = m + (B - 2 * m) * (toon - i) / (toon + 1);   // eerste snede rechts, werkt naar links
+      var klaarHier = klaar || echte < pos, nu = !klaar && echte === pos;
+      var diepte = klaarHier ? 1 : (nu && G > 0 ? Math.max(0.05, (g - 1) / G) : 0);
+      el('line', { x1: x, x2: x, y1: m, y2: m + H, stroke: 'var(--steen-rand)', 'stroke-width': 1, 'stroke-dasharray': '3 4' }, svg);
+      if (diepte > 0) el('line', { x1: x, x2: x, y1: m, y2: m + H * diepte, stroke: nu ? 'var(--accent)' : 'var(--accent-donker)', 'stroke-width': nu ? 4 : 3 }, svg);
+    }
+    el('line', { x1: 4, x2: B - 4, y1: m + H, y2: m + H, stroke: 'var(--tafel)', 'stroke-width': 2 }, svg);
+    $('tekening').replaceChildren(svg);
+    $('legenda').innerHTML = '<span><i style="background:var(--accent-donker)"></i>doorgezaagd</span><span><i style="background:var(--accent)"></i>nu bezig</span>';
+    return { opSchaal: false, n: N };
+  }
+
+  function tekenFrezen(b, klaar) {
+    var st = b.v['Stand'] || '';
+    var l = getal(/laag (\d+)/, st), L = getal(/laag \d+ van (\d+)/, st);
+    var g = getal(/baan (\d+)/, st), G = getal(/baan \d+ van (\d+)/, st);
+    if (isNaN(L) || L < 1 || isNaN(G) || G < 1) return false;
+    var B = 560, m = 14, laagH = Math.max(10, Math.min(36, 150 / L)), H = laagH * L + 40;
+    var svg = el('svg', { viewBox: '0 0 ' + B + ' ' + (H + 2 * m), role: 'img', 'aria-label': 'Freeslagen en voortgang' });
+    el('rect', { x: m, y: m, width: B - 2 * m, height: H, fill: 'var(--steen)', stroke: 'var(--steen-rand)' }, svg);
+    var bw = (B - 2 * m) / G;
+    for (var la = 1; la <= L; la++) {
+      for (var ba = 1; ba <= G; ba++) {
+        var klaarHier = klaar || la < l || (la === l && ba < g), nu = !klaar && la === l && ba === g;
+        var x = m + (B - 2 * m) - ba * bw;   // baan 1 rechts, werkt naar links
+        el('rect', { x: x + 0.5, y: m + (la - 1) * laagH + 0.5, width: bw - 1, height: laagH - 1,
+                     fill: klaarHier ? 'var(--weg)' : (nu ? 'var(--accent)' : 'var(--plan)') }, svg);
+      }
+    }
+    el('line', { x1: 4, x2: B - 4, y1: m + H, y2: m + H, stroke: 'var(--tafel)', 'stroke-width': 2 }, svg);
+    $('tekening').replaceChildren(svg);
+    $('legenda').innerHTML = '<span><i style="background:var(--weg)"></i>weggefreesd</span><span><i style="background:var(--accent)"></i>nu</span><span><i style="background:var(--plan)"></i>nog te frezen</span>';
+    return { opSchaal: false };
+  }
+
+  function tekenPlaatje(actief, klaar) {
+    var b = actief ? laatste : laatsteActief;
+    var vak = $('tekenVak');
+    if (!b) { vak.hidden = true; return; }
+    var soort = soortVan(b), vg = voortgang(b, actief), r = false, onder = '';
+    if (soort === 'cad' || soort === 'profiel') {
+      var st = b.v['Stand'] || '';
+      var K = getal(/positie (\d+)/, st), N = getal(/positie \d+ van (\d+)/, st);
+      var S = getal(/stuk (\d+)/, st), SN = getal(/stuk \d+ van (\d+)/, st);
+      if (isNaN(S)) { S = 1; SN = 1; }
+      // voortgang binnen het huidige stuk (de tekening is één stuk)
+      var pStuk = isNaN(K) || !N ? 0 : Math.max(0, K - 1) / N;
+      if (vg.geschat) pStuk = Math.max(pStuk, Math.min(1, vg.p * SN - (S - 1)));
+      var past = doorsnede && (isNaN(N) || N === parseInt(doorsnede.v['Posities'], 10)) && doorsnede.tijd <= b.tijd + 60000;
+      if (past) {
+        r = tekenProfiel(doorsnede, pStuk, klaar);
+        if (r) {
+          var stuk = /stuk (\d+) van (\d+)/.exec(b.v['Stand'] || '');
+          onder = (stuk ? 'Stuk ' + stuk[1] + ' van ' + stuk[2] + ' · ' : '') + r.posities + ' posities' + (r.opSchaal ? '' : ' · hoogte uitvergroot');
+        }
+      }
+      $('tekenKop').textContent = 'Doorsnede' + (doorsnede && doorsnede.v['Doorsnede'] ? ' — ' + doorsnede.v['Doorsnede'] : '');
+    } else if (soort === 'frezen') {
+      r = tekenFrezen(b, klaar); $('tekenKop').textContent = 'Frezen — lagen en banen';
+    } else {
+      r = tekenZagen(b, klaar); $('tekenKop').textContent = soort === 'snijlijst' ? 'Snijlijst — zaagposities' : 'Zagen — zaagposities';
+      if (r && r.n > 60) onder = r.n + ' posities (vereenvoudigd getekend)';
+    }
+    if (!r) { vak.hidden = true; return; }
+    if (!actief) onder = (klaar ? 'Laatste job: klaar. ' : 'Laatste job: ') + onder;
+    else if (vg.geschat && (soort === 'cad' || soort === 'profiel')) onder += (onder ? ' · ' : '') + 'tussen twee berichten geschat';
+    $('tekenOnder').textContent = onder;
+    vak.hidden = false;
+  }
+
+  function teken() {
+    if (!laatste) {
+      $('standVak').hidden = false;
+      $('soort').textContent = 'Nog geen bericht';
+      $('job').hidden = true;
+      $('fase').textContent = 'Wachten op de kast…';
+      $('stand').textContent = 'In de laatste 12 uur is er niets binnengekomen.';
+      $('rest').textContent = '';
+      $('klaarVak').hidden = true;
+      $('balk').style.width = '0';
+      $('tekenVak').hidden = true;
+      $('oudVak').hidden = false;
+      $('oudTekst').textContent = 'Staat de kast aan en is hij met het bedrijfsnetwerk verbonden? Staat “Meekijken op afstand” aan in de app? In rust stuurt hij elke 2 uur een bericht.';
+      $('tijd').textContent = '';
+      return;
+    }
+    var b = laatste, v = b.v, nu = Date.now(), leeftijd = (nu - b.tijd) / 1000;
+    var actief = 'Stand' in v || 'Voortgang' in v;
+    var nood = /NOODSTOP/.test(b.titel);
+    var delen = b.titel.replace(/^NOODSTOP\s*·\s*/, '').split(' · ');
+    var klaar = !actief && /gereed/i.test(v['Fase'] || '');
+    $('standVak').hidden = false;
+    $('soort').textContent = actief ? delen[0] : (nood ? 'Noodstop' : 'In rust');
+    var job = v['Job'] || (actief ? '' : (laatsteActief && laatsteActief.v['Job'] ? 'laatste job: ' + laatsteActief.v['Job'] : ''));
+    $('job').textContent = job; $('job').hidden = !job;
+    $('fase').textContent = v['Fase'] || delen[1] || delen[0] || '—';
+    $('stand').textContent = v['Stand'] || (actief ? '' : 'Geen cyclus bezig');
+    var vg = voortgang(b, actief);
+    $('balk').style.width = (actief ? Math.round(vg.p * 100) : 0) + '%';
+    $('balkVak').hidden = !actief;
+    var rest = '', klaarTekst = '';
+    var rs = getal(/\((\d+) s\)/, v['Nog']);
+    if (actief && !isNaN(rs)) {
+      var over = rs - leeftijd;
+      rest = over > 60 ? 'nog ± ' + duur(over) : 'bijna klaar';
+      if (over > 60) klaarTekst = 'Klaar om ± ' + klok(nu + over * 1000);
+    }
+    $('rest').textContent = rest;
+    $('klaarom').textContent = klaarTekst;
+    $('klaarVak').hidden = !klaarTekst;
+    $('lNood').hidden = !nood;
+    $('lPauze').hidden = !/gepauzeerd/i.test(v['Fase'] || '');
+    $('lZaag').hidden = v['Zaagmotor'] !== 'aan';
+    $('meldVak').hidden = !v['Melding'];
+    $('meldTekst').textContent = v['Melding'] || '';
+    $('hoogte').innerHTML = (v['Hoogte'] ? v['Hoogte'].replace(' mm', '') : '—') + '<small>mm</small>';
+    $('breedte').innerHTML = (v['Breedte'] ? v['Breedte'].replace(' mm', '') : '—') + '<small>mm</small>';
+    tekenPlaatje(actief, klaar);
+    var grens = actief ? 8 * 60 : 3 * 3600;
+    $('oudVak').hidden = leeftijd < grens;
+    $('oudTekst').textContent = 'Al ' + duur(leeftijd) + ' geen nieuw bericht. ' +
+      (actief ? 'De kast stuurt tijdens het zagen elke 3 minuten iets — hij is misschien niet meer met internet verbonden of uitgezet.' : 'Misschien staat de kast uit.');
+    $('tijd').textContent = 'Laatste bericht: ' + klok(b.tijd) + ' (' + (leeftijd < 60 ? 'net' : (leeftijd < 3600 ? Math.round(leeftijd / 60) + ' min' : duur(leeftijd)) + ' geleden') + ')' +
+      (v['Versie'] ? ' · firmware ' + v['Versie'] : '') + ' · kanaal ' + kanaal;
+  }
+
+  function haalLaatste() {
+    return fetch(NTFY + encodeURIComponent(kanaal) + '/json?poll=1&since=12h', { cache: 'no-store' })
+      .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.text(); })
+      .then(function (tekst) {
+        laatste = null; laatsteActief = null; doorsnede = null;
+        tekst.split('\n').forEach(function (regel) {
+          if (!regel.trim()) return;
+          try { neem(JSON.parse(regel)); } catch (e) {}
+        });
+        verb('ok', 'Verbonden met ntfy');
+        teken();
+      });
+  }
+
+  function luister() {
+    if (bron) bron.close();
+    if (!window.EventSource) return;
+    bron = new EventSource(NTFY + encodeURIComponent(kanaal) + '/sse');
+    bron.onopen = function () { verb('ok', 'Verbonden met ntfy'); };
+    bron.onmessage = function (e) {
+      try { neem(JSON.parse(e.data)); teken(); } catch (x) {}
+    };
+    bron.onerror = function () { verb('oud', 'Opnieuw verbinden…'); };
+  }
+
+  function start(k) {
+    kanaal = k; laatste = null; laatsteActief = null; doorsnede = null;
+    $('kiesVak').hidden = true; $('btnAnder').hidden = false;
+    verb('', 'Verbinden…');
+    haalLaatste().catch(function () { verb('weg', 'Geen internet of ntfy niet bereikbaar'); teken(); });
+    luister();
+    clearInterval(timer);
+    timer = setInterval(teken, 15000);   // leeftijd, geschatte voortgang en resterende tijd bijwerken
+  }
+
+  function kies() {
+    $('kiesVak').hidden = false; $('standVak').hidden = true; $('btnAnder').hidden = true;
+    if (bron) { bron.close(); bron = null; }
+    verb('', 'Geen kanaal gekozen');
+    $('inputKanaal').value = kanaal || bewaard();
+    $('inputKanaal').focus();
+  }
+
+  $('kiesForm').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var k = $('inputKanaal').value.trim().replace(/^https?:\/\/ntfy\.sh\//, '');
+    if (!geldig(k)) { $('inputKanaal').setCustomValidity('Alleen letters, cijfers, - en _'); $('inputKanaal').reportValidity(); return; }
+    $('inputKanaal').setCustomValidity('');
+    bewaar(k); start(k);
+  });
+  $('btnAnder').addEventListener('click', kies);
+  document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible' && kanaal) haalLaatste().catch(function () {}); });
+
+  var uitLink = decodeURIComponent((location.hash || '').replace(/^#/, ''));
+  var k0 = geldig(uitLink) ? uitLink : bewaard();
+  if (geldig(k0)) { bewaar(k0); start(k0); } else kies();
+})();
+</script>
+</body>
+</html>
