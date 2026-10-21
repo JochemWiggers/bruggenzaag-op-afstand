@@ -12,6 +12,7 @@
 <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icoon-192.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
 <!-- 14.0 — Meekijken op afstand. Leest het stille ntfy-kanaal <topic>-meekijk dat de kast vult.
      Alleen kijken: deze pagina stuurt niets naar de kast. Zet hem op een plek op internet
      (bijv. GitHub Pages) of open hem gewoon als bestand. Kanaalnaam: veld op de pagina of #naam.
@@ -453,5 +454,6 @@
   if (geldig(k0)) { bewaar(k0); start(k0); } else kies();
 })();
 </script>
+<script>if ('serviceWorker' in navigator) { window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function () {}); }); }</script>
 </body>
 </html>
